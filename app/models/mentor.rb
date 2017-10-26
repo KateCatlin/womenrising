@@ -1,16 +1,23 @@
 class Mentor < ActiveRecord::Base
-  validates_presence_of :question
-  validate :not_on_waitlist, :have_avalible_mentors
+  validate  :is_question_empty, :not_on_waitlist, :have_available_mentors, :is_question
 
   belongs_to :mentee, class_name: "User", foreign_key: 'mentee_id'
   belongs_to :mentoring, class_name: "User", foreign_key: 'mentor_id'
 
-  def not_on_waitlist
-    errors.add(:waitlisted,"members cannot get mentors") if self.mentee.waitlist
+  def is_question_empty
+    errors.add("You must submit a question" ,'In order to request a mentor you must not leave the question box blank.') if self.question.empty?
   end
 
-  def have_avalible_mentors
-    errors.add(:mentors, "are not currently available for you!") if choose_mentor.nil?
+  def is_question
+    errors.add("In order to receive a mentor match, you must submit a specific question! What is your question? " ,' Some examples from last round include: "How do I ask for a raise?", "How can I make time for both my significant other while being so busy?" or "How can I get my first job as a developer?"') if self.question[-1] != "?"
+  end
+
+  def not_on_waitlist
+    errors.add("You are currently Waitlisted","members who are waitlisted cannot get mentors") if self.mentee.waitlist
+  end
+
+  def have_available_mentors
+    errors.add("We currently do not have mentors available for you at this time", "We are sorry for the inconvenience") if choose_mentor.nil?
   end
 
   before_save do
@@ -40,9 +47,9 @@ private
 
   def get_possible_mentors
     if mentee.stage_of_career == 5
-      User.where(is_participating_this_month: true, mentor: true, waitlist: false, stage_of_career: 5).where( "mentor_times > ?", 0).where(mentor_industry: mentee.primary_industry).where("id != ?", mentee.id)
+      User.where(mentor: true, waitlist: false, stage_of_career: 5).where( "mentor_times > ?", 0).where(mentor_industry: mentee.primary_industry).where("id != ?", mentee.id)
     else
-      User.where(is_participating_this_month: true, mentor: true, waitlist: false).where("stage_of_career > ? AND mentor_times > ?", mentee.stage_of_career, 0).where(mentor_industry: mentee.primary_industry)
+      User.where(mentor: true, waitlist: false).where("stage_of_career > ? AND mentor_times > ?", mentee.stage_of_career, 0).where(mentor_industry: mentee.primary_industry)
     end
   end
 
